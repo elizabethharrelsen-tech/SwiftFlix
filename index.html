@@ -59,6 +59,7 @@ button{border:none;cursor:pointer}
 #admin input,#admin select,#admin textarea{width:100%;padding:12px;margin-bottom:10px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:10px}
 #admin label{font-size:12px;color:#aaa}
 .save{background:#e50914;color:#fff;padding:12px;border-radius:10px;width:100%;font-weight:700;margin-bottom:10px}
+.save:disabled{opacity:.5}
 .adminMovie{display:flex;gap:10px;background:#17171f;padding:10px;border-radius:10px;margin-bottom:8px;align-items:center}
 .adminMovie img{width:60px;height:80px;object-fit:cover;border-radius:8px}
 .del{background:#ff3b30;color:#fff;padding:8px 10px;border-radius:8px;margin-left:auto}
@@ -122,16 +123,16 @@ Episode 2 | https://.../ep2.mp4"></textarea></div>
 </div>
 
 <div id="deviceTab" style="display:none">
-<div class="hint">📱 This saves the video INSIDE your phone's browser. It will play instantly for you, even offline. To share with others, use the Link tab + Google Drive.</div>
-<label>Title</label><input id="dTitle" placeholder="e.g. My Movie from Phone">
+<div class="hint">📱 No link needed. Saves inside your phone. If it fails, you will see the exact reason now.</div>
+<label>Title</label><input id="dTitle" placeholder="e.g. The 911 Call">
 <label>Genre</label><select id="dGenre"><option>Nollywood</option><option>K-Drama</option><option>Anime</option><option>Action</option><option>Comedy</option><option>Drama</option><option>Romance</option><option>Horror</option></select>
 <label>Type</label><select id="dType"><option value="movie">🎬 Movie</option><option value="series">📺 Series - upload Ep 1, then add more eps later</option></select>
-<label>Poster from Device (optional)</label>
+<label>Poster from Device (optional - skip this first if it fails)</label>
 <div class="uploadBox"><button class="save" style="background:#222" onclick="document.getElementById('dPosterFile').click()">🖼️ Choose Poster Image</button><div id="dPosterName" style="font-size:12px;color:#aaa;margin-top:6px">No poster chosen - will use default</div><input type="file" id="dPosterFile" accept="image/*" onchange="handlePosterFile(event)"></div>
 <label>Video from Device</label>
 <div class="uploadBox"><button class="save" onclick="document.getElementById('dVideoFile').click()">📱 Choose Video from Phone</button><div id="dVideoName" style="font-size:12px;color:#00ff9d;margin-top:6px">No video chosen yet</div><div id="dProgress" style="font-size:12px;color:#aaa"></div><input type="file" id="dVideoFile" accept="video/*" onchange="handleVideoFile(event)"></div>
 <label>Description</label><textarea id="dDesc" rows="2" placeholder="Description..."></textarea>
-<button class="save" onclick="addDeviceMovie()">+ Save to SwiftFlix (Device)</button>
+<button class="save" id="deviceSaveBtn" onclick="addDeviceMovie()">+ Save to SwiftFlix (Device)</button>
 <p style="font-size:12px;color:#aaa;text-align:center">Tip: For a Series, upload Ep 1 as Series, then use "Add Episode from Device" below for Ep 2, Ep 3...</p>
 <div id="addEpBox" style="display:none;margin-top:12px"><label>Add Episode to Existing Series (from Device)</label><select id="epSeriesSelect"></select><input id="epTitle" placeholder="Episode 2 title"><button class="save" style="background:#222" onclick="document.getElementById('epVideoFile').click()">📱 Choose Episode Video</button><input type="file" id="epVideoFile" accept="video/*" hidden onchange="handleEpVideo(event)"><div id="epStatus" style="font-size:12px;color:#00ff9d"></div></div>
 </div>
@@ -143,12 +144,32 @@ Episode 2 | https://.../ep2.mp4"></textarea></div>
 
 <script>
 const ADMIN_PIN = 'boniface_odogwu1';
-let db=null;
-function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open('swiftflix-db',1); r.onupgradeneeded=e=>{ e.target.result.createObjectStore('videos',{keyPath:'id'}); }; r.onsuccess=e=>{ db=e.target.result; res(db); }; r.onerror=()=>rej(r.error); }); }
-function dbPut(id,blob){ return new Promise((res,rej)=>{ const tx=db.transaction('videos','readwrite'); tx.objectStore('videos').put({id:id,blob:blob}); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
-function dbGet(id){ return new Promise((res,rej)=>{ const tx=db.transaction('videos','readonly'); const req=tx.objectStore('videos').get(id); req.onsuccess=()=>res(req.result?req.result.blob:null); req.onerror=()=>rej(req.error); }); }
-function dbDel(id){ return new Promise(res=>{ const tx=db.transaction('videos','readwrite'); tx.objectStore('videos').delete(id); tx.oncomplete=()=>res(); }); }
-openDB();
+// FIXED: open DB fresh each time, with timeout + error message
+function openDB(){ return new Promise((resolve,reject)=>{
+  try{
+    const req=indexedDB.open('swiftflix-db',1);
+    req.onupgradeneeded=e=>{ try{ e.target.result.createObjectStore('videos',{keyPath:'id'}); }catch(err){} };
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=()=>reject(new Error('Browser storage blocked. Use Chrome, not Incognito / Private mode.'));
+    req.onblocked=()=>reject(new Error('Storage is blocked by another tab. Close other SwiftFlix tabs and try again.'));
+    setTimeout(()=>reject(new Error('Storage timed out. Close app and reopen.')),5000);
+  }catch(err){ reject(err); }
+});}
+function dbPut(id,blob){ return openDB().then(db=>new Promise((resolve,reject)=>{
+  try{
+    const tx=db.transaction('videos','readwrite');
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(new Error('Save failed - phone storage full or file too big. Try a smaller video.'));
+    tx.objectStore('videos').put({id:id,blob:blob});
+  }catch(err){ reject(err); }
+}));}
+function dbGet(id){ return openDB().then(db=>new Promise((resolve,reject)=>{
+  const tx=db.transaction('videos','readonly');
+  const req=tx.objectStore('videos').get(id);
+  req.onsuccess=()=>resolve(req.result?req.result.blob:null);
+  req.onerror=()=>reject(new Error('Could not read video'));
+}));}
+function dbDel(id){ return openDB().then(db=>new Promise(res=>{ try{ const tx=db.transaction('videos','readwrite'); tx.objectStore('videos').delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>res(); }catch(e){ res(); } })); }
 
 let movies = JSON.parse(localStorage.getItem('swiftflix_movies') || 'null') || [
 {id:1,title:"Big Buck Bunny (Movie Demo)",genre:"Comedy",type:"movie",poster:"https://picsum.photos/seed/bunny/400/600",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",desc:"A funny demo movie.",likes:12,dislikes:1},
@@ -163,12 +184,12 @@ let watchlist = JSON.parse(localStorage.getItem('swiftflix_watchlist') || '[]');
 let progress = JSON.parse(localStorage.getItem('swiftflix_progress') || '{}');
 let currentFilter='All'; let currentMovieId=null; let currentEpIndex=0; let audioMode='dub'; let epSearch='';
 let deviceVideoFile=null; let devicePosterData=null;
-function save(){ localStorage.setItem('swiftflix_movies', JSON.stringify(movies)); localStorage.setItem('swiftflix_votes', JSON.stringify(votes)); localStorage.setItem('swiftflix_watchlist', JSON.stringify(watchlist)); localStorage.setItem('swiftflix_progress', JSON.stringify(progress)); }
+function save(){ try{ localStorage.setItem('swiftflix_movies', JSON.stringify(movies)); localStorage.setItem('swiftflix_votes', JSON.stringify(votes)); localStorage.setItem('swiftflix_watchlist', JSON.stringify(watchlist)); localStorage.setItem('swiftflix_progress', JSON.stringify(progress)); }catch(e){ throw new Error('Poster too big - it filled your storage. Remove poster and try again.'); } }
 function fmt(s){ s=Math.floor(s||0); const m=Math.floor(s/60); const sec=s%60; return m+':'+(sec<10?'0':'')+sec; }
 function showTab(t){ document.getElementById('linkTab').style.display=t==='link'?'block':'none'; document.getElementById('deviceTab').style.display=t==='device'?'block':'none'; document.getElementById('tabLink').classList.toggle('active',t==='link'); document.getElementById('tabDevice').classList.toggle('active',t==='device'); if(t==='device') refreshEpSelect(); }
 function toggleType(){ const isSeries=document.getElementById('aType').value==='series'; document.getElementById('movieVideoBox').style.display=isSeries?'none':'block'; document.getElementById('seriesBox').style.display=isSeries?'block':'none'; }
-function handlePosterFile(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ devicePosterData=r.result; document.getElementById('dPosterName').textContent='Poster chosen: '+f.name; }; r.readAsDataURL(f); }
-function handleVideoFile(e){ const f=e.target.files[0]; if(!f) return; deviceVideoFile=f; document.getElementById('dVideoName').textContent='Video chosen: '+f.name+' ('+(f.size/1024/1024).toFixed(1)+' MB)'; document.getElementById('dProgress').textContent='Ready to save. Tap Save button below.'; }
+function handlePosterFile(e){ const f=e.target.files[0]; if(!f) return; if(f.size>800000){ alert('Poster is too big ('+(f.size/1024/1024).toFixed(1)+' MB). Pick a smaller image, or skip poster - it will use a default poster.'); return; } const r=new FileReader(); r.onload=()=>{ devicePosterData=r.result; document.getElementById('dPosterName').textContent='Poster chosen: '+f.name; }; r.readAsDataURL(f); }
+function handleVideoFile(e){ const f=e.target.files[0]; if(!f) return; deviceVideoFile=f; document.getElementById('dVideoName').textContent='Video chosen: '+f.name+' ('+(f.size/1024/1024).toFixed(1)+' MB)'; document.getElementById('dProgress').textContent='Ready. Tap Save button below.'; }
 function handleEpVideo(e){
   const f=e.target.files[0]; if(!f) return;
   const sid=parseInt(document.getElementById('epSeriesSelect').value);
@@ -181,26 +202,34 @@ function handleEpVideo(e){
     save(); renderAdminList(); render();
     document.getElementById('epStatus').textContent='✅ Episode added: '+title;
     document.getElementById('epTitle').value='';
-  });
+  }).catch(err=>{ document.getElementById('epStatus').textContent='❌ Failed: '+err.message; alert(err.message); });
 }
 async function addDeviceMovie(){
+  const btn=document.getElementById('deviceSaveBtn');
   const title=document.getElementById('dTitle').value.trim();
   if(!title){ alert('Add Title first'); return; }
-  if(!deviceVideoFile){ alert('Choose a video from your phone first - tap "Choose Video from Phone"'); return; }
-  document.getElementById('dProgress').textContent='Saving video to your phone... please wait, do not close.';
-  const vidId='vid_'+Date.now();
-  await dbPut(vidId,deviceVideoFile);
-  const type=document.getElementById('dType').value;
-  const poster=devicePosterData||('https://picsum.photos/seed/'+Date.now()+'/400/600');
-  if(type==='movie'){
-    movies.unshift({id:Date.now(),title:title,genre:document.getElementById('dGenre').value,type:'movie',poster:poster,video:'device:'+vidId,desc:document.getElementById('dDesc').value||'Uploaded from device',likes:0,dislikes:0,isDevice:true});
-  } else {
-    movies.unshift({id:Date.now(),title:title,genre:document.getElementById('dGenre').value,type:'series',poster:poster,desc:document.getElementById('dDesc').value||'Uploaded from device',likes:0,dislikes:0,isDevice:true,episodes:[{title:'Episode 1',video:'device:'+vidId,sub:'',dub:'',isDevice:true}]});
-  }
-  save(); renderAdminList(); render();
-  document.getElementById('dProgress').textContent='✅ Saved! It is now at the top of your home page.';
-  document.getElementById('dTitle').value=''; deviceVideoFile=null; devicePosterData=null; document.getElementById('dVideoName').textContent='No video chosen yet'; document.getElementById('dPosterName').textContent='No poster chosen';
-  alert('Saved from device! Go back home - your movie is at the top with 📱 badge.');
+  if(!deviceVideoFile){ alert('Choose a video from your phone first'); return; }
+  btn.disabled=true;
+  document.getElementById('dProgress').textContent='Step 1/2: Saving video... please wait, do not close.';
+  try{
+    const vidId='vid_'+Date.now();
+    await dbPut(vidId,deviceVideoFile);
+    document.getElementById('dProgress').textContent='Step 2/2: Saving movie info...';
+    const type=document.getElementById('dType').value;
+    const poster=devicePosterData||('https://picsum.photos/seed/'+Date.now()+'/400/600');
+    if(type==='movie'){
+      movies.unshift({id:Date.now(),title:title,genre:document.getElementById('dGenre').value,type:'movie',poster:poster,video:'device:'+vidId,desc:document.getElementById('dDesc').value||'Uploaded from device',likes:0,dislikes:0,isDevice:true});
+    } else {
+      movies.unshift({id:Date.now(),title:title,genre:document.getElementById('dGenre').value,type:'series',poster:poster,desc:document.getElementById('dDesc').value||'Uploaded from device',likes:0,dislikes:0,isDevice:true,episodes:[{title:'Episode 1',video:'device:'+vidId,sub:'',dub:'',isDevice:true}]});
+    }
+    save(); renderAdminList(); render();
+    document.getElementById('dProgress').textContent='✅ Saved! Go back home - your movie is at the top.';
+    document.getElementById('dTitle').value=''; deviceVideoFile=null; devicePosterData=null; document.getElementById('dVideoName').textContent='No video chosen yet'; document.getElementById('dPosterName').textContent='No poster chosen';
+    alert('Saved! Go back home - The 911 Call is at the top with 📱 badge.');
+  }catch(err){
+    document.getElementById('dProgress').textContent='❌ Failed: '+err.message;
+    alert('Upload failed: '+err.message+'\n\nTry: 1) Close other tabs 2) Use Chrome not Incognito 3) Skip poster 4) Try a smaller video');
+  } finally { btn.disabled=false; }
 }
 function refreshEpSelect(){
   const series=movies.filter(m=>m.type==='series');
