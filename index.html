@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwiftFlix - Watch Movies</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#0a0a0f;color:#fff}
+header{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:#000;position:sticky;top:0;z-index:10}
+header h1{color:#e50914;font-size:26px;letter-spacing:2px}
+header h1 span{color:#fff;font-size:13px}
+button{border:none;cursor:pointer}
+#search{width:100%;padding:12px 16px;background:#1a1a1a;color:#fff;border:none;outline:none;font-size:15px}
+#filters{display:flex;gap:8px;overflow-x:auto;padding:12px 16px}
+.filter{background:#222;color:#fff;padding:8px 14px;border-radius:20px;white-space:nowrap}
+.filter.active{background:#e50914}
+#continueWrap{padding:4px 16px 0;display:none}
+#continueWrap h2{font-size:15px;margin-bottom:8px}
+#continueRow{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+.contCard{min-width:150px;background:#17171f;border-radius:12px;overflow:hidden;flex-shrink:0}
+.contCard img{width:100%;height:90px;object-fit:cover;display:block}
+.contCard div{padding:8px}
+.contCard b{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contCard span{font-size:11px;color:#00d4ff}
+.progress{height:4px;background:#333;margin:6px 0;border-radius:4px;overflow:hidden}
+.progress i{display:block;height:100%;background:#e50914}
+.resume{background:#e50914;color:#fff;padding:6px 8px;border-radius:8px;width:100%;font-weight:700;font-size:12px;margin-top:4px}
+#grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 16px;padding-bottom:90px}
+.card{background:#17171f;border-radius:12px;overflow:hidden;position:relative}
+.card img{width:100%;height:180px;object-fit:cover;display:block}
+.badge{position:absolute;top:8px;left:8px;background:#e50914;color:#fff;padding:4px 8px;border-radius:12px;font-size:10px;font-weight:700}
+.bookmark{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;padding:8px 10px;border-radius:50%;font-size:16px}
+.bookmark.saved{background:#e50914}
+.card-body{padding:10px}
+.card-body h3{font-size:14px;line-height:1.3;min-height:36px}
+.card-body p{font-size:11px;color:#aaa;margin:4px 0 8px}
+.card-actions{display:flex;gap:6px;align-items:center}
+.watch{flex:1;background:#e50914;color:#fff;padding:8px;border-radius:8px;font-weight:700}
+.vote{background:#222;color:#fff;padding:8px 10px;border-radius:8px;font-size:13px}
+.vote.active{background:#00d4ff;color:#000}
+#adminBtn{position:fixed;bottom:16px;right:16px;background:#e50914;color:#fff;padding:12px 16px;border-radius:30px;font-weight:700;z-index:20}
+#player{position:fixed;inset:0;background:#000;z-index:100;display:none;flex-direction:column;overflow-y:auto}
+#player video{width:100%;aspect-ratio:16/9;background:#000;flex:none}
+#playerTop{padding:12px;display:flex;justify-content:space-between;align-items:center}
+.close{background:#333;color:#fff;padding:8px 14px;border-radius:20px}
+#playerInfo{padding:12px}
+#playerInfo p{color:#aaa;font-size:13px;margin:6px 0}
+#playerVotes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+#audioBar{display:flex;gap:8px;padding:0 12px;flex-wrap:wrap}
+.audioBtn{background:#222;color:#fff;padding:8px 12px;border-radius:20px;font-size:12px}
+.audioBtn.active{background:#00d4ff;color:#000}
+#episodes{padding:0 12px 20px}
+#episodes h3{font-size:14px;margin:10px 0 8px}
+#epSearch{width:100%;padding:10px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:10px;margin-bottom:8px}
+.epBtn{background:#222;color:#fff;padding:10px 12px;border-radius:10px;width:100%;text-align:left;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.epBtn.playing{background:#e50914}
+#admin{position:fixed;inset:0;background:#0a0a0f;z-index:200;display:none;overflow-y:auto;padding:16px}
+#admin input,#admin select,#admin textarea{width:100%;padding:12px;margin-bottom:10px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:10px}
+#admin label{font-size:12px;color:#aaa}
+.save{background:#e50914;color:#fff;padding:12px;border-radius:10px;width:100%;font-weight:700;margin-bottom:10px}
+.adminMovie{display:flex;gap:10px;background:#17171f;padding:10px;border-radius:10px;margin-bottom:8px;align-items:center}
+.adminMovie img{width:60px;height:80px;object-fit:cover;border-radius:8px}
+.del{background:#ff3b30;color:#fff;padding:8px 10px;border-radius:8px;margin-left:auto}
+.empty{text-align:center;color:#888;padding:40px 20px;grid-column:1/-1}
+.hint{background:#1a2a1a;border:1px solid #2a4a2a;padding:10px;border-radius:10px;font-size:12px;color:#aaffaa;margin-bottom:10px}
+.tabBtn{flex:1;padding:12px;border-radius:10px;background:#222;color:#fff;font-weight:700}
+.tabBtn.active{background:#e50914}
+.uploadBox{border:2px dashed #444;border-radius:12px;padding:16px;text-align:center;margin-bottom:10px}
+.uploadBox input{display:none}
+</style>
+</head>
+<body>
+<header><h1>SWIFTFLIX<span> by Boniface</span></h1><span id="count"></span></header>
+<input id="search" placeholder="🔍 Search movies... e.g. K-Drama, Nollywood, Action" oninput="render()">
+<div id="filters">
+<button class="filter active" onclick="setFilter('All',this)">All</button>
+<button class="filter" onclick="setFilter('Watchlist',this)">🔖 Watchlist</button>
+<button class="filter" onclick="setFilter('Nollywood',this)">Nollywood</button>
+<button class="filter" onclick="setFilter('K-Drama',this)">K-Drama</button>
+<button class="filter" onclick="setFilter('Anime',this)">Anime</button>
+<button class="filter" onclick="setFilter('Action',this)">Action</button>
+<button class="filter" onclick="setFilter('Comedy',this)">Comedy</button>
+<button class="filter" onclick="setFilter('Drama',this)">Drama</button>
+<button class="filter" onclick="setFilter('Romance',this)">Romance</button>
+<button class="filter" onclick="setFilter('Horror',this)">Horror</button>
+</div>
+<div id="continueWrap"><h2>▶ Continue Watching</h2><div id="continueRow"></div></div>
+<div id="grid"></div>
+<button id="adminBtn" onclick="openAdmin()">⚙️ Admin</button>
+
+<div id="player">
+<div id="playerTop"><h2 id="pTitle"></h2><button class="close" onclick="closePlayer()">✕ Close</button></div>
+<video id="videoEl" controls playsinline controlsList="nodownload"></video>
+<div id="playerInfo"><p id="pDesc"></p><div id="playerVotes"></div></div>
+<div id="audioBar">
+<button class="audioBtn active" id="btnDub" onclick="setAudio('dub')">🔊 Dub / Original</button>
+<button class="audioBtn" id="btnSub" onclick="setAudio('sub')">💬 Sub / Subtitles ON</button>
+<button class="audioBtn" id="btnOff" onclick="setAudio('off')">🔇 Subtitles OFF</button>
+</div>
+<div id="episodes"></div>
+</div>
+
+<div id="admin">
+<h2>⚙️ Admin Page</h2>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<button class="tabBtn active" id="tabLink" onclick="showTab('link')">🔗 Add by Link</button>
+<button class="tabBtn" id="tabDevice" onclick="showTab('device')">📱 Upload from Device</button>
+</div>
+
+<div id="linkTab">
+<label>Type</label>
+<select id="aType" onchange="toggleType()"><option value="movie">🎬 Movie</option><option value="series">📺 Series / K-Drama</option></select>
+<label>Title</label><input id="aTitle" placeholder="e.g. My Sweet Mobster">
+<label>Genre</label><select id="aGenre"><option>Nollywood</option><option>K-Drama</option><option>Anime</option><option>Action</option><option>Comedy</option><option>Drama</option><option>Romance</option><option>Horror</option></select>
+<label>Poster Image Link</label><input id="aPoster" placeholder="https://.../poster.jpg">
+<div id="movieVideoBox"><label>Video Link</label><input id="aVideo" placeholder="https://.../movie.mp4"><label>Subtitle Link (.vtt optional)</label><input id="aSub" placeholder="https://.../sub.vtt"><label>Dub Link (optional)</label><input id="aDub" placeholder="https://.../dub.mp4"></div>
+<div id="seriesBox" style="display:none"><div class="hint">One per line: Episode 1 | VIDEO LINK | SUB LINK | DUB LINK</div><textarea id="aEpisodes" rows="6" placeholder="Episode 1 | https://.../ep1.mp4
+Episode 2 | https://.../ep2.mp4"></textarea></div>
+<label>Description</label><textarea id="aDesc" rows="3" placeholder="Description..."></textarea>
+<button class="save" onclick="addMovie()">+ Add by Link</button>
+</div>
+
+<div id="deviceTab" style="display:none">
+<div class="hint">📱 This saves the video INSIDE your phone's browser. It will play instantly for you, even offline. To share with others, use the Link tab + Google Drive.</div>
+<label>Title</label><input id="dTitle" placeholder="e.g. My Movie from Phone">
+<label>Genre</label><select id="dGenre"><option>Nollywood</option><option>K-Drama</option><option>Anime</option><option>Action</option><option>Comedy</option><option>Drama</option><option>Romance</option><option>Horror</option></select>
+<label>Type</label><select id="dType"><option value="movie">🎬 Movie</option><option value="series">📺 Series - upload Ep 1, then add more eps later</option></select>
+<label>Poster from Device (optional)</label>
+<div class="uploadBox"><button class="save" style="background:#222" onclick="document.getElementById('dPosterFile').click()">🖼️ Choose Poster Image</button><div id="dPosterName" style="font-size:12px;color:#aaa;margin-top:6px">No poster chosen - will use default</div><input type="file" id="dPosterFile" accept="image/*" onchange="handlePosterFile(event)"></div>
+<label>Video from Device</label>
+<div class="uploadBox"><button class="save" onclick="document.getElementById('dVideoFile').click()">📱 Choose Video from Phone</button><div id="dVideoName" style="font-size:12px;color:#00ff9d;margin-top:6px">No video chosen yet</div><div id="dProgress" style="font-size:12px;color:#aaa"></div><input type="file" id="dVideoFile" accept="video/*" onchange="handleVideoFile(event)"></div>
+<label>Description</label><textarea id="dDesc" rows="2" placeholder="Description..."></textarea>
+<button class="save" onclick="addDeviceMovie()">+ Save to SwiftFlix (Device)</button>
+<p style="font-size:12px;color:#aaa;text-align:center">Tip: For a Series, upload Ep 1 as Series, then use "Add Episode from Device" below for Ep 2, Ep 3...</p>
+<div id="addEpBox" style="display:none;margin-top:12px"><label>Add Episode to Existing Series (from Device)</label><select id="epSeriesSelect"></select><input id="epTitle" placeholder="Episode 2 title"><button class="save" style="background:#222" onclick="document.getElementById('epVideoFile').click()">📱 Choose Episode Video</button><input type="file" id="epVideoFile" accept="video/*" hidden onchange="handleEpVideo(event)"><div id="epStatus" style="font-size:12px;color:#00ff9d"></div></div>
+</div>
+
+<button class="save" style="background:#222" onclick="closeAdmin()">Back to Home</button>
+<h3 style="margin:16px 0 10px">Your Movies & Series</h3>
+<div id="adminList"></div>
+</div>
+
+<script>
+const ADMIN_PIN = 'boniface_odogwu1';
+let db=null;
+function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open('swiftflix-db',1); r.onupgradeneeded=e=>{ e.target.result.createObjectStore('videos',{keyPath:'id'}); }; r.onsuccess=e=>{ db=e.target.result; res(db); }; r.onerror=()=>rej(r.error); }); }
+function dbPut(id,blob){ return new Promise((res,rej)=>{ const tx=db.transaction('videos','readwrite'); tx.objectStore('videos').put({id:id,blob:blob}); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+function dbGet(id){ return new Promise((res,rej)=>{ const tx=db.transaction('videos','readonly'); const req=tx.objectStore('videos').get(id); req.onsuccess=()=>res(req.result?req.result.blob:null); req.onerror=()=>rej(req.error); }); }
+function dbDel(id){ return new Promise(res=>{ const tx=db.transaction('videos','readwrite'); tx.objectStore('videos').delete(id); tx.oncomplete=()=>res(); }); }
+openDB();
+
+let movies = JSON.parse(localStorage.getItem('swiftflix_movies') || 'null') || [
+{id:1,title:"Big Buck Bunny (Movie Demo)",genre:"Comedy",type:"movie",poster:"https://picsum.photos/seed/bunny/400/600",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",desc:"A funny demo movie.",likes:12,dislikes:1},
+{id:2,title:"My Sweet Mobster (K-Drama Demo)",genre:"K-Drama",type:"series",poster:"https://picsum.photos/seed/kdrama/400/600",desc:"K-Drama demo with 3 episodes.",likes:20,dislikes:0,episodes:[
+{title:"Episode 1 - The Meeting",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",sub:"",dub:""},
+{title:"Episode 2 - The Secret",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",sub:"",dub:""},
+{title:"Episode 3 - The Confession",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",sub:"",dub:""}
+]}
+];
+let votes = JSON.parse(localStorage.getItem('swiftflix_votes') || '{}');
+let watchlist = JSON.parse(localStorage.getItem('swiftflix_watchlist') || '[]');
+let progress = JSON.parse(localStorage.getItem('swiftflix_progress') || '{}');
+let currentFilter='All'; let currentMovieId=null; let currentEpIndex=0; let audioMode='dub'; let epSearch='';
+let deviceVideoFile=null; let devicePosterData=null;
+function save(){ localStorage.setItem('swiftflix_movies', JSON.stringify(movies)); localStorage.setItem('swiftflix_votes', JSON.stringify(votes)); localStorage.setItem('swiftflix_watchlist', JSON.stringify(watchlist)); localStorage.setItem('swiftflix_progress', JSON.stringify(progress)); }
+function fmt(s){ s=Math.floor(s||0); const m=Math.floor(s/60); const sec=s%60; return m+':'+(sec<10?'0':'')+sec; }
+function showTab(t){ document.getElementById('linkTab').style.display=t==='link'?'block':'none'; document.getElementById('deviceTab').style.display=t==='device'?'block':'none'; document.getElementById('tabLink').classList.toggle('active',t==='link'); document.getElementById('tabDevice').classList.toggle('active',t==='device'); if(t==='device') refreshEpSelect(); }
+function toggleType(){ const isSeries=document.getElementById('aType').value==='series'; document.getElementById('movieVideoBox').style.display=isSeries?'none':'block'; document.getElementById('seriesBox').style.display=isSeries?'block':'none'; }
+function handlePosterFile(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ devicePosterData=r.result; document.getElementById('dPosterName').textContent='Poster chosen: '+f.name; }; r.readAsDataURL(f); }
+function handleVideoFile(e){ const f=e.target.files[0]; if(!f) return; deviceVideoFile=f; document.getElementById('dVideoName').textContent='Video chosen: '+f.name+' ('+(f.size/1024/1024).toFixed(1)+' MB)'; document.getElementById('dProgress').textContent='Ready to save. Tap Save button below.'; }
+function handleEpVideo(e){
+  const f=e.target.files[0]; if(!f) return;
+  const sid=parseInt(document.getElementById('epSeriesSelect').value);
+  const title=document.getElementById('epTitle').value.trim()||('Episode ' + ((movies.find(m=>m.id===sid)?.episodes?.length||0)+1));
+  const vidId='vid_'+Date.now();
+  document.getElementById('epStatus').textContent='Saving '+f.name+'... please wait';
+  dbPut(vidId,f).then(()=>{
+    const m=movies.find(x=>x.id===sid); if(!m.episodes) m.episodes=[];
+    m.episodes.push({title:title,video:'device:'+vidId,sub:'',dub:'',isDevice:true});
+    save(); renderAdminList(); render();
+    document.getElementById('epStatus').textContent='✅ Episode added: '+title;
+    document.getElementById('epTitle').value='';
+  });
+}
+async function addDeviceMovie(){
+  const title=document.getElementById('dTitle').value.trim();
+  if(!title){ alert('Add Title first'); return; }
+  if(!deviceVideoFile){ alert('Choose a video from your phone first - tap "Choose Video from Phone"'); return; }
+  document.getElementById('dProgress').textContent='Saving video to your phone... please wait, do not close.';
+  const vidId='vid_'+Date.now();
+  await dbPut(vidId,deviceVideoFile);
+  const type=document.getElementById('dType').value;
+  const poster=devicePosterData||('https://picsum.photos/seed/'+Date.now()+'/400/600');
+  if(type==='movie'){
+    movies.unshift({id:Date.now(),title:title,genre:document.getElementById('dGenre').value,type:'movie',poster:poster,video:'device:'+vidId,desc:document.getElementById('dDesc').value||'Uploaded from device',likes:0,dislikes:0,isDevice:true});
+  } else {
+    movies.unshift({id:Date.now(),title:title,genre:document.getElementById('dGenre').value,type:'series',poster:poster,desc:document.getElementById('dDesc').value||'Uploaded from device',likes:0,dislikes:0,isDevice:true,episodes:[{title:'Episode 1',video:'device:'+vidId,sub:'',dub:'',isDevice:true}]});
+  }
+  save(); renderAdminList(); render();
+  document.getElementById('dProgress').textContent='✅ Saved! It is now at the top of your home page.';
+  document.getElementById('dTitle').value=''; deviceVideoFile=null; devicePosterData=null; document.getElementById('dVideoName').textContent='No video chosen yet'; document.getElementById('dPosterName').textContent='No poster chosen';
+  alert('Saved from device! Go back home - your movie is at the top with 📱 badge.');
+}
+function refreshEpSelect(){
+  const series=movies.filter(m=>m.type==='series');
+  const sel=document.getElementById('epSeriesSelect');
+  if(series.length===0){ document.getElementById('addEpBox').style.display='none'; return; }
+  document.getElementById('addEpBox').style.display='block';
+  sel.innerHTML=series.map(m=>`<option value="${m.id}">${m.title} (${(m.episodes||[]).length} eps)</option>`).join('');
+}
+function setFilter(f,el){ currentFilter=f; document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active')); el.classList.add('active'); render(); }
+function toggleWatchlist(id,event){ if(event) event.stopPropagation(); if(watchlist.includes(id)){ watchlist=watchlist.filter(x=>x!==id); } else { watchlist.push(id); } save(); render(); }
+function progKey(id,ep){ return id+'_'+ep; }
+function renderContinue(){
+  const wrap=document.getElementById('continueWrap'); const row=document.getElementById('continueRow');
+  const items = Object.keys(progress).map(k=>{ const parts=k.split('_'); const id=parts[0]; const ep=parseInt(parts[1]||0); const m=movies.find(x=>x.id==id); if(!m) return null; const p=progress[k]; if(!p || p.time<10) return null; if(p.duration && p.time/p.duration>0.95) return null; return {m,p,ep}; }).filter(Boolean);
+  if(items.length===0 || currentFilter!=='All'){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  row.innerHTML = items.map(({m,p,ep})=>{ const pct = p.duration ? Math.round(p.time/p.duration*100) : 0; const label = m.type==='series' ? (m.episodes[ep]?.title || 'Episode '+(ep+1)) : m.title; return `<div class="contCard"><img src="${m.poster}" onclick="openPlayer(${m.id},true,${ep})"><div><b>${m.title}</b><span>${label} • Left at ${fmt(p.time)} • ${pct}%</span><div class="progress"><i style="width:${pct}%"></i></div><button class="resume" onclick="openPlayer(${m.id},true,${ep})">▶ Resume</button><button class="resume" style="background:#222" onclick="removeProgress('${m.id}_${ep}')">✕ Remove</button></div></div>`; }).join('');
+}
+function removeProgress(key){ delete progress[key]; save(); render(); }
+function render(){
+  const q = document.getElementById('search').value.toLowerCase(); const grid = document.getElementById('grid');
+  document.getElementById('count').textContent = movies.length + ' titles • ' + watchlist.length + ' saved';
+  renderContinue();
+  let list = movies.filter(m => (m.title.toLowerCase().includes(q) || m.genre.toLowerCase().includes(q)));
+  if(currentFilter==='Watchlist'){ list = list.filter(m=>watchlist.includes(m.id)); } else if(currentFilter!=='All'){ list = list.filter(m=>m.genre===currentFilter); }
+  if(list.length===0){ grid.innerHTML = currentFilter==='Watchlist' ? '<div class="empty">Your Watchlist is empty.<br>Tap 🔖 on any movie to save it here!</div>' : '<div class="empty">No movies found.<br>Go to Admin and add one!</div>'; return; }
+  grid.innerHTML = list.map(m=>{ const v = votes[m.id] || ''; const saved = watchlist.includes(m.id); const isSeries = m.type==='series'; const epCount = isSeries ? (m.episodes||[]).length : 0; const p = progress[progKey(m.id,0)]; const bar = p && p.duration ? `<div class="progress"><i style="width:${Math.round(p.time/p.duration*100)}%"></i></div><small style="color:#00d4ff">Continue from ${fmt(p.time)}</small>` : ''; return `<div class="card">${isSeries?`<span class="badge">📺 ${epCount} EPS</span>`:''} ${m.isDevice?`<span class="badge" style="left:auto;right:44px;background:#00d4ff;color:#000">📱 DEVICE</span>`:''}
+      <button class="bookmark ${saved?'saved':''}" onclick="toggleWatchlist(${m.id},event)">${saved?'🔖':'♡'}</button>
+      <img src="${m.poster}" onerror="this.src='https://picsum.photos/seed/${m.id}/400/600'" onclick="openPlayer(${m.id},true,0)">
+      <div class="card-body"><h3>${m.title}</h3><p>${m.genre} ${isSeries?'• Series':''} • ${m.likes} 👍 • ${m.dislikes} 👎</p>${bar}
+      <div class="card-actions"><button class="watch" onclick="openPlayer(${m.id},false,0)">▶ ${isSeries?'Watch Ep 1':'Watch'}</button>
+      <button class="vote ${v==='like'?'active':''}" onclick="vote(${m.id},'like')">👍 ${m.likes}</button>
+      <button class="vote ${v==='dislike'?'active':''}" onclick="vote(${m.id},'dislike')">👎 ${m.dislikes}</button>
+      </div></div></div>`; }).join('');
+}
+function vote(id,type){ const m = movies.find(x=>x.id===id); const old = votes[id]; if(old==='like') m.likes--; if(old==='dislike') m.dislikes--; if(old===type){ votes[id]=''; } else { votes[id]=type; if(type==='like') m.likes++; else m.dislikes++; } save(); render(); if(document.getElementById('player').style.display==='flex') updatePlayerVotes(id); }
+function getCurrentData(){ const m=movies.find(x=>x.id===currentMovieId); if(m.type==='series'){ return m.episodes[currentEpIndex] || m.episodes[0]; } return m; }
+async function resolveVideoUrl(url){
+  if(!url) return '';
+  if(url.startsWith('device:')){ const blob=await dbGet(url.replace('device:','')); if(blob) return URL.createObjectURL(blob); return ''; }
+  return url;
+}
+function applyAudio(){ const v=document.getElementById('videoEl'); const data=getCurrentData(); const wasPlaying=!v.paused; const t=v.currentTime; document.getElementById('btnDub').classList.toggle('active',audioMode==='dub'); document.getElementById('btnSub').classList.toggle('active',audioMode==='sub'); document.getElementById('btnOff').classList.toggle('active',audioMode==='off'); const oldTrack=v.querySelector('track'); if(oldTrack) oldTrack.remove(); resolveVideoUrl(audioMode==='dub' && data.dub ? data.dub : data.video).then(src=>{ v.src=src; v.currentTime=t; if(audioMode==='sub' && data.sub){ const track=document.createElement('track'); track.kind='subtitles'; track.label='English'; track.srclang='en'; track.src=data.sub; track.default=true; v.appendChild(track); } if(wasPlaying) v.play().catch(()=>{}); }); }
+function setAudio(mode){ audioMode=mode; applyAudio(); if(mode==='sub'){ const d=getCurrentData(); if(!d.sub) alert('No subtitle file for this episode yet.'); } }
+async function openPlayer(id,resume,ep){
+  const m = movies.find(x=>x.id===id); currentMovieId=id; currentEpIndex=ep||0; audioMode='dub'; epSearch='';
+  document.getElementById('pTitle').textContent = m.title + (m.type==='series' ? ' • ' + (m.episodes[currentEpIndex]?.title||'') : '');
+  document.getElementById('pDesc').textContent = m.genre + ' • ' + (m.desc||'') + (m.isDevice?' • 📱 From your device':'');
+  const v = document.getElementById('videoEl');
+  const src = await resolveVideoUrl(getCurrentData().video);
+  if(!src){ alert('Video not found on this device. It was uploaded on a different phone/browser.'); return; }
+  v.src = src; v.playbackRate=1;
+  document.getElementById('player').style.display='flex';
+  updatePlayerVotes(id); renderEpisodes(id);
+  document.getElementById('btnDub').classList.add('active'); document.getElementById('btnSub').classList.remove('active'); document.getElementById('btnOff').classList.remove('active');
+  v.onloadedmetadata = ()=>{ if(resume){ const k=progKey(id,currentEpIndex); if(progress[k] && progress[k].time>10){ v.currentTime=progress[k].time; } } v.play().catch(()=>{}); };
+  v.ontimeupdate = ()=>{ if(currentMovieId===id && v.duration>0){ const k=progKey(id,currentEpIndex); progress[k]={time:v.currentTime,duration:v.duration,updated:Date.now()}; if(v.currentTime/v.duration>0.95){ delete progress[k]; } save(); } };
+  v.onended = ()=>{ const k=progKey(id,currentEpIndex); delete progress[k]; save(); if(m.type==='series' && currentEpIndex < (m.episodes.length-1)){ if(confirm('Episode finished. Play next episode?')){ playEpisode(id,currentEpIndex+1); } } else { render(); } };
+  if(!resume){ v.play().catch(()=>{}); }
+}
+function playEpisode(id,ep){ openPlayer(id,false,ep); }
+function renderEpisodes(id){
+  const m = movies.find(x=>x.id===id); const box=document.getElementById('episodes');
+  if(m.type!=='series'){ box.innerHTML=''; return; }
+  const filtered = m.episodes.map((e,i)=>({e,i})).filter(({e})=> e.title.toLowerCase().includes(epSearch.toLowerCase()));
+  box.innerHTML = '<h3>📺 Episodes ('+m.episodes.length+')</h3><input id="epSearch" placeholder="🔍 Search episode... e.g. Episode 2" value="'+epSearch+'" oninput="epSearch=this.value;renderEpisodes('+id+')">'
+    + (filtered.length===0 ? '<p style="color:#888;font-size:13px">No episode found.</p>' : filtered.map(({e,i})=>{ const k=progKey(id,i); const p=progress[k]; const pct = p&&p.duration ? Math.round(p.time/p.duration*100) : 0; return `<button class="epBtn ${i===currentEpIndex?'playing':''}" onclick="playEpisode(${id},${i})"><span>▶ ${e.title} ${e.isDevice?'📱':''}</span><small>${pct>0?pct+'% watched':''}</small></button>`; }).join(''));
+}
+function updatePlayerVotes(id){ const m = movies.find(x=>x.id===id); const cur = votes[id] || ''; const saved = watchlist.includes(id); document.getElementById('playerVotes').innerHTML = `<button class="vote ${cur==='like'?'active':''}" onclick="vote(${id},'like')">👍 Like (${m.likes})</button><button class="vote ${cur==='dislike'?'active':''}" onclick="vote(${id},'dislike')">👎 Dislike (${m.dislikes})</button><button class="vote ${saved?'active':''}" onclick="toggleWatchlist(${id});updatePlayerVotes(${id})">${saved?'🔖 Saved':'♡ Save to Watchlist'}</button>`; }
+function closePlayer(){ const v=document.getElementById('videoEl'); v.pause(); v.src=''; document.getElementById('player').style.display='none'; currentMovieId=null; render(); }
+function openAdmin(){ const pin = prompt('Enter Admin PIN:'); if(pin!==ADMIN_PIN){ alert('Wrong PIN. Only admin can upload.'); return; } document.getElementById('admin').style.display='block'; renderAdminList(); }
+function closeAdmin(){ document.getElementById('admin').style.display='none'; render(); }
+function addMovie(){
+  const title=document.getElementById('aTitle').value.trim(); const poster=document.getElementById('aPoster').value.trim(); const type=document.getElementById('aType').value;
+  if(!title){ alert('Please add Title'); return; }
+  if(type==='movie'){ const video=document.getElementById('aVideo').value.trim(); if(!video){ alert('Please add Video Link'); return; } movies.unshift({id:Date.now(),title:title,genre:document.getElementById('aGenre').value,type:'movie',poster:poster||'https://picsum.photos/seed/'+Date.now()+'/400/600',video:video,sub:document.getElementById('aSub').value.trim(),dub:document.getElementById('aDub').value.trim(),desc:document.getElementById('aDesc').value||'Watch on SwiftFlix',likes:0,dislikes:0}); }
+  else { const raw=document.getElementById('aEpisodes').value.trim(); if(!raw){ alert('Please add at least 1 episode'); return; } const eps = raw.split('\n').map(line=>{ const parts=line.split('|'); if(parts.length<2) return null; return {title:parts[0].trim(), video:parts[1].trim(), sub:(parts[2]||'').trim(), dub:(parts[3]||'').trim()}; }).filter(Boolean); if(eps.length===0){ alert('Use format: Episode 1 | https://.../ep1.mp4'); return; } movies.unshift({id:Date.now(),title:title,genre:document.getElementById('aGenre').value,type:'series',poster:poster||'https://picsum.photos/seed/'+Date.now()+'/400/600',desc:document.getElementById('aDesc').value||'Watch on SwiftFlix',likes:0,dislikes:0,episodes:eps}); }
+  save(); renderAdminList(); render(); document.getElementById('aTitle').value=''; document.getElementById('aPoster').value=''; document.getElementById('aVideo').value=''; document.getElementById('aSub').value=''; document.getElementById('aDub').value=''; document.getElementById('aEpisodes').value=''; document.getElementById('aDesc').value=''; alert('Added! Users can now see it.');
+}
+async function deleteMovie(id){ if(!confirm('Delete this?')) return; const m=movies.find(x=>x.id===id); if(m){ if(m.video && m.video.startsWith('device:')) await dbDel(m.video.replace('device:','')); if(m.episodes) for(const e of m.episodes){ if(e.video && e.video.startsWith('device:')) await dbDel(e.video.replace('device:','')); } } movies=movies.filter(m=>m.id!==id); watchlist=watchlist.filter(x=>x!==id); Object.keys(progress).forEach(k=>{ if(k.startsWith(id+'_')) delete progress[k]; }); save(); renderAdminList(); render(); }
+function renderAdminList(){ document.getElementById('adminList').innerHTML = movies.map(m=>`<div class="adminMovie"><img src="${m.poster}"><div><b>${m.title} ${m.isDevice?'📱':''}</b><br><small>${m.genre} ${m.type==='series'?'• 📺 '+(m.episodes||[]).length+' EPS':''} • ${m.likes} 👍 ${m.dislikes} 👎</small></div><button class="del" onclick="deleteMovie(${m.id})">Delete</button></div>`).join(''); }
+render();
+</script>
+</body>
+</html>
